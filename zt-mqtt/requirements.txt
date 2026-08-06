@@ -1,0 +1,5 @@
+paho-mqtt>=2.1.0
+amqtt>=0.11.4
+pyyaml>=6.0
+psutil>=5.9
+matplotlib>=3.8

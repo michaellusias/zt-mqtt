@@ -1,0 +1,45 @@
+# ABAC-lite policy set for the MQTT enforcement monitor.
+# Each rule matches a client "role" attribute (asserted at auth time, verified
+# against the shared-secret token — see enforcement_monitor/reauth.py) to a
+# set of allowed publish/subscribe topic filters. MQTT wildcards (+, #) are
+# supported in the filters using standard MQTT topic-matching semantics.
+
+roles:
+  sensor:
+    can_publish:
+      - "sensors/{client_id}/#"
+    can_subscribe: []          # sensors never subscribe (least privilege)
+
+  aggregator:
+    can_publish:
+      - "aggregates/{client_id}/#"
+    can_subscribe:
+      - "sensors/#"
+
+  dashboard:
+    can_publish: []
+    can_subscribe:
+      - "sensors/#"
+      - "aggregates/#"
+
+  admin:
+    can_publish:
+      - "#"
+    can_subscribe:
+      - "#"
+
+# Trust-scoring thresholds (continuous verification layer)
+trust:
+  initial_score: 100
+  min_score: 0
+  max_score: 100
+  reauth_threshold: 60        # force token refresh below this score
+  disconnect_threshold: 20     # force disconnect below this score
+  decay_per_auth_failure: 25
+  decay_per_rate_violation: 10
+  recovery_per_clean_window: 2
+  window_seconds: 10
+  max_msgs_per_window: 60      # calibrated above the benchmark's normal publish rate;
+                                # see experiments/attack_scenarios.py for the flood test
+                                # that deliberately exceeds this to trigger detection
+  reauth_token_lifetime_seconds: 30

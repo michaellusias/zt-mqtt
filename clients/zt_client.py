@@ -64,5 +64,4 @@ class ZTClient:
 
     def stop(self):
         self._auto_reconnect = False
-        self.client.loop_stop()
-        self.client.disconnect()
+        self.client.disconnect()  # skip loop_stop(): its internal join waits up to paho's ~1s select timeout

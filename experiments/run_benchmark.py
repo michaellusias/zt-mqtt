@@ -69,9 +69,7 @@ def measure_e2e_latency(pub_connect_fn, sub_connect_fn, topic_pub, topic_sub, n=
         time.sleep(0.02)
 
     received.wait(timeout=10)
-    pub_client.loop_stop()
     pub_client.disconnect()
-    sub_client.loop_stop()
     sub_client.disconnect()
     return latencies
 
@@ -82,8 +80,7 @@ def run_plain():
     for i in range(N_CONNECT_TRIALS):
         c = pc.make_client(f"bench-plain-{i}")
         connect_latencies.append(pc.connect_and_time(c))
-        c.loop_stop()
-        c.disconnect()
+        c.disconnect()  # skip loop_stop(): its internal join waits up to paho's ~1s select timeout
 
     def pub_connect():
         c = pc.make_client("bench-plain-pub")
@@ -106,8 +103,7 @@ def run_tls():
     for i in range(N_CONNECT_TRIALS):
         c = tc.make_client(f"bench-tls-{i}")
         connect_latencies.append(tc.connect_and_time(c))
-        c.loop_stop()
-        c.disconnect()
+        c.disconnect()  # skip loop_stop(): its internal join waits up to paho's ~1s select timeout
 
     def pub_connect():
         c = tc.make_client("bench-tls-pub")
@@ -127,8 +123,14 @@ def run_tls():
 def run_zt():
     from clients.zt_client import ZTClient
     connect_latencies = []
+    # Cycle through distinct provisioned device identities rather than
+    # reconnecting the same client_id repeatedly -- reusing one identity
+    # back-to-back triggers the broker's same-clientID session-replacement
+    # handling (a real but separate overhead source, not representative of
+    # a fleet of many distinct constrained devices, which is the scenario
+    # this project targets).
     for i in range(N_CONNECT_TRIALS):
-        z = ZTClient("sensor-01")
+        z = ZTClient(f"sensor-{(i % 10) + 1:02d}")
         connect_latencies.append(z.connect_and_time())
         z.stop()
 
